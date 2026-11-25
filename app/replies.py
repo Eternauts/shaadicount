@@ -31,3 +31,29 @@ def confirmation(language: str, saved: dict) -> str:
         plates=saved["headcount"] + saved["plus_ones"],
         diet=DIET[language].get(saved["diet"], ""),
     )
+
+
+REFUSALS = {
+    "plus_ones_not_allowed": {
+        "hi-IN": "माफ़ कीजिए, यह निमंत्रण {invited} लोगों के लिए है, इसलिए हम अतिरिक्त मेहमान नहीं जोड़ पाएँगे। कृपया अपने परिवार की गिनती बताइए।",
+        "kn-IN": "ಕ್ಷಮಿಸಿ, ಈ ಆಮಂತ್ರಣ {invited} ಜನರಿಗೆ ಮಾತ್ರ, ಹೆಚ್ಚುವರಿ ಅತಿಥಿಗಳನ್ನು ಸೇರಿಸಲು ಆಗುವುದಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮವರು ಎಷ್ಟು ಜನ ಎಂದು ತಿಳಿಸಿ.",
+        "ta-IN": "மன்னிக்கவும், இந்த அழைப்பு {invited} பேருக்கு மட்டும், கூடுதல் விருந்தினர்களைச் சேர்க்க முடியாது. உங்கள் குடும்பத்தில் எத்தனை பேர் என்று சொல்லுங்கள்.",
+        "en-IN": "Sorry, this invitation is for {invited} people, so we cannot add extra guests. Please tell us how many of your own group are coming.",
+    },
+    "catering_locked": {
+        "hi-IN": "माफ़ कीजिए, खाने की गिनती अब पक्की हो चुकी है, इसलिए हम अतिरिक्त मेहमान नहीं जोड़ पाएँगे।",
+        "kn-IN": "ಕ್ಷಮಿಸಿ, ಊಟದ ಸಂಖ್ಯೆ ಈಗ ಅಂತಿಮವಾಗಿದೆ, ಹೆಚ್ಚುವರಿ ಅತಿಥಿಗಳನ್ನು ಸೇರಿಸಲು ಆಗುವುದಿಲ್ಲ.",
+        "ta-IN": "மன்னிக்கவும், உணவு எண்ணிக்கை இப்போது இறுதி செய்யப்பட்டுவிட்டது, கூடுதல் விருந்தினர்களைச் சேர்க்க முடியாது.",
+        "en-IN": "Sorry, the catering count is now final, so we cannot add extra guests.",
+    },
+    "not_understood": {
+        "hi-IN": "माफ़ कीजिए, समझ नहीं आया। कृपया बताइए कितने लोग आ रहे हैं, और खाना वेज या नॉन-वेज?",
+        "kn-IN": "ಕ್ಷಮಿಸಿ, ಅರ್ಥವಾಗಲಿಲ್ಲ. ಎಷ್ಟು ಜನ ಬರುತ್ತೀರಿ, ಊಟ ವೆಜ್ ಅಥವಾ ನಾನ್-ವೆಜ್ ಎಂದು ತಿಳಿಸಿ.",
+        "ta-IN": "மன்னிக்கவும், புரியவில்லை. எத்தனை பேர் வருகிறீர்கள், சைவமா அசைவமா என்று சொல்லுங்கள்.",
+        "en-IN": "Sorry, we did not catch that. Please say how many of you are coming, and veg or non-veg.",
+    },
+}
+
+
+def refusal(household: dict, code: str) -> str:
+    return REFUSALS[code][household["language"]].format(invited=household["invited_count"])

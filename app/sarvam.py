@@ -1,5 +1,6 @@
 """The Sarvam calls behind a voice RSVP: speech to text, extraction, text to speech."""
 import base64
+import hashlib
 import logging
 import subprocess
 import tempfile
@@ -27,7 +28,7 @@ VOICES = {
     "en-IN": "simran_en_customer",
 }
 MAX_SECONDS = 30  # Saaras REST limit
-REQUEST_OPTIONS = {"timeout_in_seconds": 15, "max_retries": 1}
+REQUEST_OPTIONS = {"timeout_in_seconds": 8, "max_retries": 1}  # retries do not cover timeouts
 
 _client = SarvamAI(api_subscription_key=SARVAM_API_KEY) if SARVAM_API_KEY else None
 
@@ -61,22 +62,28 @@ def _call(step: str):
         log.info("sarvam step=%s ms=%.0f outcome=%s", step, ms, outcome)
 
 
-def _to_wav(audio: bytes) -> bytes:
-    """Any recording (WebM, OGG/Opus, M4A, MP3) to 16 kHz mono WAV."""
+def _to_opus(audio: bytes) -> bytes:
+    """Any recording (WebM, OGG, M4A, MP3) to 16 kHz mono Opus.
+
+    The WAV is only for measuring length. Opus is a tenth of the size, with the same transcript:
+    on the venue wifi it took about 1 s to transcribe, WAV about 3 s.
+    """
     with tempfile.TemporaryDirectory() as tmp:
-        source, target = Path(tmp) / "in", Path(tmp) / "out.wav"
+        source, wav, opus = Path(tmp) / "in", Path(tmp) / "out.wav", Path(tmp) / "out.ogg"
         source.write_bytes(audio)
         command = [
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             # Uploads are untrusted: plain audio containers only, no playlists or URLs.
             "-protocol_whitelist", "file",
             "-format_whitelist", "webm,ogg,wav,mp3,mp4,aac,amr,flac",
-            "-i", str(source), "-vn", "-ac", "1", "-ar", "16000", str(target),
+            "-i", str(source),
+            "-vn", "-ac", "1", "-ar", "16000", str(wav),
+            "-vn", "-ac", "1", "-ar", "16000", "-c:a", "libopus", "-b:a", "32k", str(opus),
         ]  # fmt: skip
         start = time.perf_counter()
         try:
             subprocess.run(command, check=True, capture_output=True, timeout=15)
-            wav = target.read_bytes()
+            length, compressed = wav.stat().st_size, opus.read_bytes()
         except FileNotFoundError as exc:
             raise SarvamError("ffmpeg", "ffmpeg is missing. Run: brew install ffmpeg") from exc
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
@@ -85,25 +92,47 @@ def _to_wav(audio: bytes) -> bytes:
                 422, "bad_audio", "We could not read that recording. Please try again."
             ) from exc
         log.info("sarvam step=ffmpeg ms=%.0f", (time.perf_counter() - start) * 1000)
-    if len(wav) > MAX_SECONDS * 16000 * 2:  # 16,000 samples a second, 2 bytes each
+    if length > MAX_SECONDS * 16000 * 2:  # 16,000 samples a second, 2 bytes each
         raise RsvpRejected(422, "audio_too_long", f"Please keep it under {MAX_SECONDS} seconds.")
-    return wav
+    return compressed
+
+
+_heard: dict[str, dict] = {}  # last good transcript of each recording, for when Sarvam times out
 
 
 def transcribe(audio_bytes: bytes, filename: str) -> dict:
     """Saaras speech to text with automatic language detection."""
+    key = hashlib.sha256(audio_bytes).hexdigest()
+    try:
+        result = _transcribe(audio_bytes, filename)
+    except SarvamError:
+        if key in _heard:
+            log.warning("speech to text failed, using the saved transcript of this same recording")
+            return {**_heard[key], "saved": True}
+        result = _transcribe(audio_bytes, filename)  # one more try
+    if len(_heard) > 50:
+        _heard.clear()
+    _heard[key] = result
+    return result
+
+
+def _transcribe(audio_bytes: bytes, filename: str) -> dict:
     log.info("voice note received: %s, %d bytes", Path(filename).suffix or "no suffix", len(audio_bytes))
-    wav = _to_wav(audio_bytes)
+    opus = _to_opus(audio_bytes)
     with _call("stt"):
         response = _client.speech_to_text.transcribe(
-            file=("rsvp.wav", wav, "audio/wav"),
+            file=("rsvp.ogg", opus, "audio/ogg"),
             model=STT_MODEL,
             mode="codemix",  # keeps Hinglish readable: English words in English, Hindi in Devanagari
             language_code="unknown",  # detect it
             # No keyterms: they made Saaras write diet words the guest never said.
             request_options=REQUEST_OPTIONS,
         )
-    return {"transcript": (response.transcript or "").strip(), "language": response.language_code}
+    return {
+        "transcript": (response.transcript or "").strip(),
+        "language": response.language_code,
+        "saved": False,
+    }
 
 
 class Group(BaseModel):
@@ -234,6 +263,7 @@ def speak(text: str, language: str) -> bytes:
             speaker=VOICES[language],
             output_audio_codec="mp3",
             speech_sample_rate=24000,
-            request_options=REQUEST_OPTIONS,
+            # Longer: the written reply is already on screen while this runs.
+            request_options={"timeout_in_seconds": 20, "max_retries": 1},
         )
         return base64.b64decode(response.audios[0])

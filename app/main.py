@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
+from pydantic import BaseModel, Field
 
 from app import catering, db, flags, replies, rsvp, sarvam, seed, voice
 from app.config import CATERER_BUFFER_PLATES, SARVAM_API_KEY
@@ -60,7 +61,7 @@ def status():
     return {
         "sarvam_configured": bool(SARVAM_API_KEY),
         "allow_plus_ones": flags.get_environment_flags()["allow_plus_ones"]["enabled"],
-        "flagsmith_last_error": flags.last_error,
+        "flagsmith_problem": flags.problem(),
         "caterer_buffer_plates": CATERER_BUFFER_PLATES,
     }
 
@@ -72,8 +73,9 @@ def flag_state(household_id: int | None = None):
         state = flags.get_environment_flags()
     else:
         state = rsvp.household_flags(rsvp.find_household(household_id))
-    # live is false when Flagsmith did not answer and these are the last known values.
-    return {"flags": state, "live": flags.last_error is None, "error": flags.last_error}
+    # live is false when Flagsmith cannot be reached and these are the last known rules.
+    problem = flags.problem()
+    return {"flags": state, "live": problem is None, "error": problem}
 
 
 @app.get("/")
@@ -86,12 +88,28 @@ def invite_page(household_id: int):
     return FileResponse(STATIC_DIR / "invite.html")
 
 
+@app.get("/demo")
+def stage_page():
+    return FileResponse(STATIC_DIR / "stage.html")
+
+
+@app.get("/intro.mp4")
+def intro_video():
+    path = voice.SAMPLES_DIR / "intro_video.mp4"
+    if not path.exists():
+        raise rsvp.RsvpRejected(404, "video_not_found", "samples/intro_video.mp4 is missing.")
+    return FileResponse(path, media_type="video/mp4")
+
+
 @app.get("/api/invite/{household_id}")
 def invite(household_id: int):
     """Everything the guest page needs, after Flagsmith has decided for this household."""
     household = rsvp.find_household(household_id)
     state = rsvp.household_flags(household)
     locked = state["catering_lock_mode"]["enabled"]
+    variant = flags.get_value("rsvp_prompt_variant", state)
+    if variant == "polite_hindi" and household["language"] != "hi-IN":
+        variant = "direct"  # do not show Hindi wording to a Tamil or Kannada household
     latest = next(h for h in db.list_households() if h["id"] == household_id)
     answered = latest["status"] != "pending"
     return {
@@ -99,7 +117,7 @@ def invite(household_id: int):
         "plus_ones_allowed": state["allow_plus_ones"]["enabled"] and not locked,
         "catering_locked": locked,
         "voice_enabled": not state["voice_fallback_text"]["enabled"],
-        "prompt_variant": flags.get_value("rsvp_prompt_variant", state),
+        "prompt_variant": variant,
         "latest_rsvp": (
             {k: latest[k] for k in ("attending", "headcount", "plus_ones", "diet")} if answered else None
         ),
@@ -133,6 +151,16 @@ def rsvp_voice_sample(name: str, household_id: int = 1):
     return voice.submit(data, filename, household_id, channel="web_voice")
 
 
+class ChatMessage(BaseModel):
+    household_id: int
+    text: str = Field(min_length=1, max_length=500)
+
+
+@app.post("/api/rsvp/message")
+def rsvp_message(body: ChatMessage):
+    return voice.submit_message(body.text, body.household_id)
+
+
 @app.get("/api/samples")
 def samples():
     return voice.list_samples()
@@ -141,7 +169,10 @@ def samples():
 @app.get("/api/samples/{name}")
 def sample_audio(name: str):
     data, filename = voice.load_sample(name)
-    return Response(data, media_type=mimetypes.guess_type(filename)[0] or "audio/mpeg")
+    # A phone recording renamed to .ogg is still MP4 inside, so look at the bytes first.
+    is_mp4 = data[4:8] == b"ftyp"
+    media_type = "audio/mp4" if is_mp4 else mimetypes.guess_type(filename)[0] or "audio/mpeg"
+    return Response(data, media_type=media_type)
 
 
 @app.get("/api/rsvp/{rsvp_id}/reply-audio")
@@ -158,6 +189,15 @@ def reply_audio(rsvp_id: int):
 @app.get("/api/catering/impact")
 def catering_impact():
     return catering.impact()
+
+
+@app.get("/api/households/{household_id}/refusal-audio/{code}")
+def refusal_audio(household_id: int, code: str):
+    household = rsvp.find_household(household_id)
+    if code not in replies.REFUSALS:
+        raise rsvp.RsvpRejected(404, "reply_not_found", f"No spoken reply for '{code}'.")
+    audio = sarvam.speak(replies.refusal(household, code), household["language"])
+    return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/caterer.csv")

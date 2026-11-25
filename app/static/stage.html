@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShaadiCount: demo stage</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%23E9860C'/><circle cx='16' cy='16' r='7' fill='%238C0F1F'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rozha+One&family=Hind:wght@400;500;600&family=Hind+Madurai:wght@400;600&family=Hind+Mysuru:wght@400;600&display=swap">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  if (window.tailwind) tailwind.config = { theme: { extend: {
+    colors: { sindoor: "#8C0F1F", maroon: "#5E0714", haldi: "#E0A526", cream: "#FFF6E0", ink: "#3A0A10", mehendi: "#2F7D4F", genda: "#C77700" },
+    fontFamily: { display: ["Rozha One", "Hind Madurai", "Hind Mysuru", "serif"], sans: ["Hind", "Hind Madurai", "Hind Mysuru", "sans-serif"] } } } };
+</script>
+<style>
+  body { background: #8C0F1F; color: #3A0A10; font-family: Hind, "Hind Madurai", "Hind Mysuru", sans-serif; }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 3px solid #E0A526; outline-offset: 2px; }
+  .act[aria-pressed="true"] { background: #FFF6E0; color: #3A0A10; }
+  .hatch { background: repeating-linear-gradient(135deg, #B79A73 0 3px, #F3E2C0 3px 9px); }
+  .seg { transition: width .5s ease; }
+  .step { opacity: .35; transition: opacity .3s ease; }
+  .step.done { opacity: 1; }
+  .dots::after { content: "..."; display: inline-block; width: 1.4em; overflow: hidden; vertical-align: bottom; animation: dots 1.2s steps(4) infinite; }
+  @keyframes dots { from { width: 0; } }
+  dialog::backdrop { background: #2A0309ee; }
+  @media (prefers-reduced-motion: reduce) { .seg, .step { transition: none; } .dots::after { animation: none; } }
+</style>
+</head>
+<body class="min-h-screen bg-sindoor text-ink font-sans lg:h-screen lg:overflow-hidden">
+<div class="mx-auto flex max-w-[1680px] flex-col gap-3 px-4 py-3 lg:h-full">
+
+  <header class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-cream">
+    <h1 class="font-display text-3xl leading-none">ShaadiCount</h1>
+    <nav class="flex flex-wrap gap-2 font-semibold" aria-label="Demo steps">
+      <button class="act rounded border-2 border-cream px-4 py-1.5" data-act="1">1. Tamil voice RSVP</button>
+      <button class="act rounded border-2 border-cream px-4 py-1.5" data-act="2">2. Surprise +1</button>
+      <button class="act rounded border-2 border-cream px-4 py-1.5" data-act="3">3. Approval and lock</button>
+    </nav>
+    <div class="flex flex-wrap gap-x-5 gap-y-1 font-semibold underline decoration-haldi decoration-2 underline-offset-4">
+      <button id="open-intro" class="underline decoration-haldi decoration-2 underline-offset-4">Intro video</button>
+      <a href="/" target="_blank">Host ledger</a>
+      <a href="https://app.flagsmith.com" target="_blank" rel="noopener">Flagsmith</a>
+      <a href="https://app.nudgebee.com" target="_blank" rel="noopener">NudgeBee</a>
+    </div>
+  </header>
+
+  <main class="grid min-h-0 flex-1 gap-3 lg:grid-cols-[25rem_1fr_21rem]">
+
+    <!-- Chat -->
+    <section class="flex min-h-[34rem] flex-col rounded-sm bg-cream lg:min-h-0" aria-label="Guest chat">
+      <div class="border-b-4 border-double border-sindoor px-4 py-3">
+        <label for="household" class="sr-only">Guest household</label>
+        <select id="household" class="w-full bg-cream font-display text-2xl text-sindoor"></select>
+        <p id="household-rule" class="mt-0.5 text-base"></p>
+      </div>
+      <div id="chat" class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite"></div>
+      <div class="border-t border-[#E3C9A0] px-4 py-3">
+        <div id="chips" class="mb-2 flex flex-wrap gap-2"></div>
+        <form id="composer" class="flex gap-2">
+          <button id="record" type="button" class="h-11 w-11 shrink-0 rounded-full bg-genda text-white" aria-label="Record a voice note">
+            <svg viewBox="0 0 24 24" class="mx-auto h-5 w-5" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.900V22h2v-3.100A7 7 0 0 0 19 12z"/></svg>
+          </button>
+          <input id="text" class="min-w-0 flex-1 rounded border-2 border-sindoor bg-white px-3 text-base" placeholder="Type as the guest" autocomplete="off" aria-label="Message">
+          <button class="rounded bg-sindoor px-4 font-semibold text-cream">Send</button>
+        </form>
+        <p class="mt-2 text-sm">Simulated chat. It calls the same API as the invitation page.</p>
+      </div>
+    </section>
+
+    <!-- What the backend did -->
+    <section class="min-h-0 overflow-y-auto rounded-sm bg-cream px-6 py-4" aria-label="What the backend did">
+      <h2 class="font-display text-2xl text-sindoor">What happened behind the reply</h2>
+      <ol id="trace" class="mt-3 space-y-3"></ol>
+      <details class="mt-4"><summary class="cursor-pointer font-semibold">Full API response</summary>
+        <pre id="raw" class="mt-2 max-h-72 overflow-auto rounded bg-white p-3 text-sm leading-snug"></pre></details>
+    </section>
+
+    <!-- Plates and flags -->
+    <section class="min-h-0 overflow-y-auto rounded-sm bg-cream px-5 py-4" aria-label="Plates and flags">
+      <h2 class="font-display text-2xl text-sindoor">Plates</h2>
+      <p class="mt-1 flex items-baseline gap-2"><span id="predicted" class="font-display text-5xl leading-none"></span><span id="of-buffer" class="text-lg"></span></p>
+      <div class="relative mt-3 pb-1">
+        <div id="bar" class="flex h-6 w-full gap-0.5"></div>
+        <div id="buffer-line" class="absolute -top-1 bottom-0 w-0 border-l-[3px] border-ink"></div>
+      </div>
+      <p id="breach" class="mt-2 rounded px-3 py-2 text-lg font-semibold"></p>
+      <button id="blast" class="mt-3 w-full rounded bg-haldi px-4 py-2.5 font-semibold disabled:opacity-60">Simulate WhatsApp Blast</button>
+      <button id="reset" class="mt-2 w-full rounded border-2 border-sindoor px-4 py-2 font-semibold text-sindoor disabled:opacity-60">Reset demo</button>
+      <p id="note" class="mt-2 text-base" role="status" hidden></p>
+
+      <h2 class="mt-5 font-display text-2xl text-sindoor">Flagsmith</h2>
+      <p id="flags-live" class="text-base"></p>
+      <dl id="flags" class="mt-1"></dl>
+    </section>
+  </main>
+</div>
+
+<dialog id="intro" class="w-[min(92vw,1280px)] bg-transparent p-0">
+  <video id="intro-video" src="/intro.mp4" controls playsinline class="w-full"></video>
+  <form method="dialog" class="mt-3 text-center"><button class="rounded bg-cream px-6 py-2 font-semibold">Close</button></form>
+</dialog>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const number = new Intl.NumberFormat("en-IN");
+const SEGMENT = { close_family: "Close family", relatives: "Relatives", colleagues: "Colleagues" };
+const LANGUAGE = { "hi-IN": "Hindi", "kn-IN": "Kannada", "ta-IN": "Tamil", "en-IN": "English" };
+const DIET = { veg: "Veg", non_veg: "Non-veg", jain: "Jain", mixed: "Mixed or not said" };
+const HELLO = {
+  "hi-IN": "नमस्ते! अनन्या और कबीर की शादी में आपका स्वागत है। कितने लोग आ रहे हैं?",
+  "kn-IN": "ನಮಸ್ಕಾರ! ಅನನ್ಯಾ ಮತ್ತು ಕಬೀರ್ ಮದುವೆಗೆ ಸ್ವಾಗತ. ಎಷ್ಟು ಜನ ಬರುತ್ತೀರಿ?",
+  "ta-IN": "வணக்கம்! அனன்யா, கபீர் திருமணத்திற்கு வரவேற்கிறோம். எத்தனை பேர் வருகிறீர்கள்?",
+  "en-IN": "Namaste! You are invited to the wedding of Ananya and Kabir. How many of you are coming?",
+};
+// Each act opens on a household and offers ready messages. Voice samples are added to act 1.
+const ACTS = {
+  1: { household: 2, chips: [] },
+  2: { household: 10, chips: ["We are 5, and 2 of my friends are coming too. Non-veg.", "Only the 5 of us then, non-veg."] },
+  3: { household: 4, chips: ["We are 20, and 4 neighbours are coming too. Veg."] },
+};
+let households = [], samples = [], act = 1, impact = null, busy = false;
+
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+async function call(url, options) {
+  try {
+    const response = await fetch(url, options);
+    return { status: response.status, body: await response.json() };
+  } catch { return { status: 0, body: { message: "The server did not answer." } }; }
+}
+const post = (url, body) => call(url, body instanceof FormData || !body
+  ? { method: "POST", body } : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+// ---------- chat ----------
+function bubble(from, text) {
+  const node = element("div", `w-fit max-w-[88%] rounded-lg px-3.5 py-2 text-lg leading-snug ${from === "guest" ? "ml-auto bg-[#F6D77E]" : "border border-[#E3C9A0] bg-white"}`, text);
+  $("chat").append(node);
+  $("chat").scrollTop = $("chat").scrollHeight;
+  return node;
+}
+function voiceBubble(from, url, label, autoplay) {
+  const node = bubble(from), row = element("div", "flex items-center gap-3");
+  const button = element("button", "h-10 w-10 shrink-0 rounded-full bg-sindoor text-cream disabled:opacity-50", "▶");
+  button.setAttribute("aria-label", `Play ${label}`);
+  const bars = element("div", "flex h-8 items-center gap-[3px]");
+  for (let i = 0; i < 26; i++) {
+    const bar = element("span", "w-[3px] rounded-full bg-sindoor");
+    bar.style.height = `${22 + 70 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.6))}%`;
+    bars.append(bar);
+  }
+  row.append(button, bars);
+  node.append(row, element("p", "mt-1 text-base", label));
+  const audio = new Audio(url);
+  audio.onplay = () => (button.textContent = "❚❚");
+  audio.onpause = audio.onended = () => (button.textContent = "▶");
+  audio.onerror = () => { button.disabled = true; };
+  audio.ontimeupdate = () => {
+    const played = audio.duration ? (audio.currentTime / audio.duration) * bars.children.length : 0;
+    [...bars.children].forEach((bar, i) => (bar.style.opacity = i <= played || audio.paused ? 1 : 0.35));
+  };
+  button.onclick = () => (audio.paused ? audio.play() : audio.pause());
+  if (autoplay) audio.play().catch(() => {});
+  return audio;
+}
+
+async function send(request) {
+  if (busy) return;
+  busy = true;
+  resetTrace();
+  const thinking = bubble("host", "");
+  thinking.append(element("span", "dots", "Listening"));
+  const before = impact && impact.predicted_plates;
+  const { status, body } = await request();
+  thinking.remove();
+  await loadImpact();
+  showTrace(status, body, before);
+  bubble("host", body.reply_text || body.message || "Something went wrong.");
+  if (body.reply_audio_url) voiceBubble("host", body.reply_audio_url, "Spoken reply", true);
+  busy = false;
+}
+// Let the audience hear the voice note first, while the API already works on it.
+function sendSample(name) {
+  if (busy) return;
+  voiceBubble("guest", `/api/samples/${name}`, "Voice note", true);
+  send(() => post(`/api/rsvp/voice/sample/${name}?household_id=${current().id}`));
+}
+function sendText(text) {
+  if (busy || !text.trim()) return;
+  bubble("guest", text);
+  send(() => post("/api/rsvp/message", { household_id: current().id, text }));
+}
+$("composer").onsubmit = (event) => { event.preventDefault(); sendText($("text").value); $("text").value = ""; };
+
+let recorder = null;
+$("record").onclick = async () => {
+  if (recorder) { recorder.stop(); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { say("Allow the microphone in the browser first."); return; }
+  const chunks = [];
+  recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = (event) => chunks.push(event.data);
+  const timer = setTimeout(() => recorder && recorder.stop(), 28000);
+  recorder.onstop = () => {
+    clearTimeout(timer);
+    stream.getTracks().forEach((track) => track.stop());
+    const type = recorder.mimeType || "audio/webm";
+    recorder = null;
+    $("record").className = $("record").className.replace("bg-sindoor", "bg-genda");
+    const blob = new Blob(chunks, { type }), form = new FormData();
+    form.append("household_id", current().id);
+    form.append("audio", blob, type.includes("mp4") ? "note.mp4" : "note.webm");
+    voiceBubble("guest", URL.createObjectURL(blob), "Voice note", false);
+    send(() => post("/api/rsvp/voice", form));
+  };
+  recorder.start();
+  $("record").className = $("record").className.replace("bg-genda", "bg-sindoor");
+};
+
+// ---------- trace ----------
+const STEPS = ["Saaras heard", "Sarvam LLM understood", "Flagsmith decided", "Plates updated", "Bulbul replied"];
+function resetTrace() {
+  $("raw").textContent = "";
+  $("trace").replaceChildren(...STEPS.map((title) => {
+    const step = element("li", "step rounded border-2 border-[#E3C9A0] bg-white/60 px-4 py-2.5");
+    const head = element("div", "flex items-baseline justify-between gap-3");
+    head.append(element("h3", "text-lg font-semibold", title), element("span", "time text-base"));
+    step.append(head, element("div", "body text-lg leading-snug"));
+    return step;
+  }));
+}
+function setStep(index, content, ms, title) {
+  const step = $("trace").children[index];
+  if (title) step.querySelector("h3").textContent = title;
+  step.classList.add("done");
+  step.querySelector(".body").replaceChildren(...content);
+  step.querySelector(".time").textContent = ms ? `${(ms / 1000).toFixed(1)} s` : "";
+}
+function showTrace(status, body, before) {
+  resetTrace();
+  $("raw").textContent = JSON.stringify(body, null, 2);
+  const times = body.timings_ms || {};
+  if (!body.parsed) {
+    setStep(0, [element("p", "text-sindoor", body.detail || body.message)]);
+    return;
+  }
+  const p = body.parsed, extra = p.plus_ones;
+  setStep(0, [
+    element("p", "", body.transcript),
+    element("p", "text-base", body.saved_transcript ? "Sarvam timed out. Saved transcript of this same recording" : body.detected_language ? `Detected ${LANGUAGE[body.detected_language] || body.detected_language}` : "No speech to text needed"),
+  ], times.stt, body.detected_language ? "Saaras heard" : "The guest typed");
+
+  const groups = element("ul", "text-base");
+  for (const g of p.groups) groups.append(element("li", "", `${g.count} from "${g.who}"${g.outsider ? ", extra guests" : ""}`));
+  setStep(1, [
+    element("p", "font-semibold", p.attending ? `${p.headcount} invited, ${extra} extra, ${DIET[p.diet]}` : "Not coming"),
+    groups, element("p", "text-base", `Confidence ${Math.round(p.confidence * 100)}%`),
+  ], times.llm);
+
+  const r = body.rules;
+  const blocked = ["plus_ones_not_allowed", "catering_locked"].includes(body.error);
+  const verdict = body.error === "not_understood" ? "Not asked: the reply was unclear"
+    : body.error === "catering_locked" ? "Blocked: the catering count is locked"
+    : blocked ? "Blocked: no extra guests for this segment"
+    : extra ? "Allowed: this segment may bring extra guests" : "Nothing to decide: no extra guests";
+  setStep(2, [
+    element("p", `font-semibold ${blocked ? "text-sindoor" : extra ? "text-mehendi" : ""}`, verdict),
+    element("p", "text-base", `${SEGMENT[r.segment]}: allow_plus_ones ${r.allow_plus_ones ? "on" : "off"}, catering_lock_mode ${r.catering_locked ? "on" : "off"}`),
+  ]);
+  setStep(3, [element("p", "", status === 200 && impact
+    ? `${before} predicted plates became ${impact.predicted_plates}, buffer ${impact.buffer_plates}` : "The reply was not saved")],
+    null, status === 200 ? "Plates updated" : "Plates unchanged");
+  if (body.reply_audio_url) setStep(4, [element("p", "", body.reply_text)]);
+}
+
+// ---------- plates and flags ----------
+async function loadImpact() {
+  const { status, body } = await call("/api/catering/impact");
+  if (status !== 200) return;
+  impact = body;
+  const over = impact.overflow_plates, scale = Math.max(impact.buffer_plates * 1.2, impact.predicted_plates * 1.03);
+  $("predicted").textContent = impact.predicted_plates;
+  $("of-buffer").textContent = `predicted, buffer ${impact.buffer_plates}`;
+  const parts = [[impact.confirmed_plates - impact.confirmed_plus_ones, "bg-mehendi"], [impact.confirmed_plus_ones, "bg-genda"], [impact.expected_from_pending, "hatch"]];
+  if (!$("bar").children.length) $("bar").append(...parts.map(() => element("div")));
+  parts.forEach(([plates, look], i) => {
+    $("bar").children[i].className = `seg shrink-0 ${look}`;
+    $("bar").children[i].style.width = `${(plates / scale) * 100}%`;
+  });
+  $("buffer-line").style.left = `${(impact.buffer_plates / scale) * 100}%`;
+  $("breach").className = `mt-2 rounded px-3 py-2 text-lg font-semibold ${over ? "bg-sindoor text-cream" : "bg-white/60"}`;
+  $("breach").textContent = over
+    ? `⚠ ${over} plates over, Rs ${number.format(impact.overflow_cost_inr)}`
+    : `${impact.buffer_plates - impact.predicted_plates} plates still free`;
+}
+async function loadFlags() {
+  const { status, body } = await call("/api/flags");
+  if (status !== 200) return;
+  $("flags-live").textContent = body.live ? "Defaults, read live" : "Not reachable. Last known values.";
+  $("flags").replaceChildren(...Object.entries(body.flags).map(([name, flag]) => {
+    const row = element("div", "flex items-center justify-between gap-2 border-t border-[#E3C9A0] py-1.5");
+    const alarm = name === "catering_lock_mode";
+    row.append(element("dt", "text-base", name), element("dd", `rounded px-2.5 font-semibold ${flag.enabled ? (alarm ? "bg-sindoor text-cream" : "bg-mehendi text-white") : "border-2 border-[#B79A73]"}`, flag.enabled ? "On" : "Off"));
+    return row;
+  }));
+}
+async function loadRule() {
+  const guest = current();
+  if (!guest) return;
+  const { status, body } = await call(`/api/flags?household_id=${guest.id}`);
+  if (status !== 200 || guest.id !== current().id) return;
+  const locked = body.flags.catering_lock_mode.enabled, allowed = body.flags.allow_plus_ones.enabled;
+  $("household-rule").textContent = `${SEGMENT[guest.segment]}, ${guest.invited_count} invited. Extra guests: ${locked ? "locked" : allowed ? "allowed" : "not allowed"}`;
+}
+
+// ---------- controls ----------
+const current = () => households.find((h) => h.id === Number($("household").value));
+function openChat() {
+  $("chat").replaceChildren();
+  bubble("host", HELLO[current().language]);
+  resetTrace();
+  loadRule();
+}
+function chooseAct(next) {
+  act = Number(next);
+  for (const b of document.querySelectorAll(".act")) b.setAttribute("aria-pressed", Number(b.dataset.act) === act);
+  $("household").value = ACTS[act].household;
+  const chip = "rounded border-2 border-sindoor px-3 py-1 text-left text-base font-semibold leading-snug text-sindoor";
+  const voices = act === 1 ? samples.map((name) => {
+    const button = element("button", `${chip} capitalize`, `▶ ${name.replace(/^sample_/, "")} voice note`);
+    button.onclick = () => sendSample(name);
+    return button;
+  }) : [];
+  const texts = ACTS[act].chips.map((text) => {
+    const button = element("button", chip, text);
+    button.onclick = () => sendText(text);
+    return button;
+  });
+  $("chips").replaceChildren(...voices, ...texts);
+  openChat();
+}
+for (const b of document.querySelectorAll(".act")) b.onclick = () => chooseAct(b.dataset.act);
+$("household").onchange = openChat;
+
+function say(text) { $("note").textContent = text; $("note").hidden = false; setTimeout(() => ($("note").hidden = true), 6000); }
+$("blast").onclick = async () => {
+  $("blast").disabled = true;
+  const { status } = await post("/api/demo/blast");
+  await loadImpact();
+  say(status === 200 ? "The blast replies are in." : `The blast did not run (HTTP ${status}).`);
+  $("blast").disabled = false;
+};
+$("reset").onclick = async () => {
+  $("reset").disabled = true;
+  await post("/api/demo/reset");
+  await loadImpact();
+  chooseAct(1);
+  say("Back to the starting guest list.");
+  $("reset").disabled = false;
+};
+$("open-intro").onclick = () => { $("intro").showModal(); $("intro-video").currentTime = 0; $("intro-video").play().catch(() => {}); };
+$("intro").onclose = () => $("intro-video").pause();
+
+function every(ms, load) { (async function run() { await load(); setTimeout(run, ms); })(); }
+(async function start() {
+  const [h, s] = await Promise.all([call("/api/households"), call("/api/samples")]);
+  households = h.body; samples = s.status === 200 ? s.body : [];
+  samples.sort((a, b) => b.includes("tamil") - a.includes("tamil"));  // act 1 opens with Tamil
+  $("household").replaceChildren(...households.map((g) => { const o = element("option", "", g.name); o.value = g.id; return o; }));
+  chooseAct(1);
+  every(2000, loadImpact);
+  every(3000, loadFlags);
+  every(4000, loadRule);
+})();
+</script>
+</body>
+</html>

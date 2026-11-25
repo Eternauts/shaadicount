@@ -35,7 +35,13 @@ def find_household(household_id: int) -> dict:
     return household
 
 
-def submit(household_id: int, rsvp: Rsvp, channel: str, transcript: str | None = None) -> dict:
+def submit(
+    household_id: int,
+    rsvp: Rsvp,
+    channel: str,
+    transcript: str | None = None,
+    state: dict | None = None,  # the household's flags, if the caller already read them
+) -> dict:
     household = find_household(household_id)
 
     headcount, plus_ones = 0, 0
@@ -48,7 +54,7 @@ def submit(household_id: int, rsvp: Rsvp, channel: str, transcript: str | None =
             raise RsvpRejected(422, "empty_rsvp", "Attending, but nobody is coming. How many people?")
 
     if plus_ones > 0:
-        state = household_flags(household)
+        state = state or household_flags(household)
         if state["catering_lock_mode"]["enabled"]:
             raise RsvpRejected(
                 409, "catering_locked", "The catering count is now final, so we cannot add extra guests."

@@ -1,22 +1,18 @@
 # Sample voice notes
 
-Two short recordings so the demo works without a microphone.
-Any common audio format works (m4a, mp3, wav, ogg, webm). Keep each under 30 seconds.
+Real recordings, so the demo works without a microphone.
 
-| File name | Language | What to say | Household |
-| --- | --- | --- | --- |
-| `hinglish` | Hinglish | "Haan beta, main aur Sharma uncle ke teen log aa rahe hain, pure veg" | 1, Sharma Parivar (invited 6) |
-| `tamil` or `kannada` | Tamil or Kannada | Your own line: you are coming, how many people, veg or non-veg | 2, Iyer Family (Tamil, invited 8) or 3, Gowda Kutumba (Kannada, invited 10) |
-
-Only the name before the dot matters, so `hinglish.m4a` and `hinglish.mp3` both work.
-Keep one file per name.
+| File | Language | What it says | Household | Expected result |
+| --- | --- | --- | --- | --- |
+| `sample_tamil.ogg` | Tamil | Our family is 7 people in all, everyone is vegetarian | 2, Iyer Family | 7 guests, veg |
+| `sample_hinglish.ogg` | Hinglish | From the Sharma family, me and Sharma uncle, 3 people in total, all pure vegetarian | 1, Sharma Parivar | 3 guests, veg |
+| `intro_video.mp4` | | Intro video, shown on the demo stage | | |
 
 Run one:
 
 ```bash
-curl -X POST "localhost:8000/api/rsvp/voice/sample/hinglish?household_id=1"
+curl -X POST "localhost:8000/api/rsvp/voice/sample/sample_tamil?household_id=2"
 ```
 
-Expected for `hinglish`: attending, headcount 4, plus_ones 0, diet veg.
-
-Use your own voice, or a recording whose speaker agreed to it being public: this repository is public.
+To add another, drop in any ogg, m4a, mp3, wav or webm file under 30 seconds. Its name becomes
+the sample's name. Only add recordings whose speaker agreed to it: this repository is public.

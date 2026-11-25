@@ -251,8 +251,8 @@ function showOutcome({ status, body }) {
   const extraBlocked = ["plus_ones_not_allowed", "catering_locked"].includes(body.error);
   showResult({
     good: false, title: extraBlocked ? "Extra guests cannot be added" : "Your reply is not saved yet",
-    message: body.message || "Something is missing. Check the form and send it again.",
-    transcript: body.transcript, offerWithoutExtra: extraBlocked,
+    message: body.reply_text || body.message || "Something is missing. Check the form and send it again.",
+    transcript: body.transcript, audioUrl: body.reply_audio_url, offerWithoutExtra: extraBlocked,
   });
   if (extraBlocked && body.parsed) setCount("headcount", body.parsed.headcount);
   if (body.fallback === "text") showForm("Voice is not available right now. Please fill in the form.");
