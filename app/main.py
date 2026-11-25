@@ -16,5 +16,6 @@ def status():
     return {
         "sarvam_configured": bool(SARVAM_API_KEY),
         "allow_plus_ones": flags.is_enabled("allow_plus_ones", default=True),
+        "flagsmith_last_error": flags.last_error,
         "caterer_buffer_plates": CATERER_BUFFER_PLATES,
     }

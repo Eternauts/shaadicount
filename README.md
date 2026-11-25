@@ -16,6 +16,14 @@ How can an Indian wedding host stop losing lakhs to catering over-orders or shor
 
 ## Run locally
 
+| Variable | Used for |
+| --- | --- |
+| `SARVAM_API_KEY` | Speech to text, extraction, text to speech |
+| `FLAGSMITH_SERVER_ENVIRONMENT_KEY` | Reading flags on the server |
+| `FLAGSMITH_CLIENT_ENVIRONMENT_KEY` | Public environment key |
+| `FLAGSMITH_ADMIN_TOKEN` | Changing flags through the Admin API |
+| `CATERER_BUFFER_PLATES`, `COST_PER_PLATE_INR` | Optional, default 400 and 1500 |
+
 ```bash
 cp .env.example .env   # fill in keys
 python -m venv .venv && source .venv/bin/activate
