@@ -248,9 +248,10 @@ function showOutcome({ status, body }) {
     });
     return;
   }
-  const extraBlocked = ["plus_ones_not_allowed", "catering_locked"].includes(body.error);
+  const extraBlocked = body.error === "plus_ones_not_allowed";
+  const locked = body.error === "catering_locked";
   showResult({
-    good: false, title: extraBlocked ? "Extra guests cannot be added" : "Your reply is not saved yet",
+    good: false, title: locked ? "The guest count is closed" : extraBlocked ? "Extra guests cannot be added" : "Your reply is not saved yet",
     message: body.reply_text || body.message || "Something is missing. Check the form and send it again.",
     transcript: body.transcript, audioUrl: body.reply_audio_url, offerWithoutExtra: extraBlocked,
   });
@@ -359,7 +360,7 @@ async function loadInvite() {
   $("voice").hidden = !invite.voice_enabled;
   if (!invite.voice_enabled) showForm();
   if (invite.catering_locked) {
-    $("notice").textContent = "The caterer's count is final, so extra guests cannot be added now.";
+    $("notice").textContent = "The caterer's count is final, so replies cannot change it now.";
     $("notice").hidden = false;
   }
   if (first) {

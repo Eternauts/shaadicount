@@ -53,6 +53,10 @@
     <p id="message" class="mb-3 rounded bg-cream px-4 py-2 font-semibold" role="status" hidden></p>
 
     <main class="page bg-cream rounded-sm">
+      <section id="locked" class="bg-ink px-4 py-4 text-cream sm:px-7" role="status" hidden>
+        <p class="font-display text-4xl leading-tight sm:text-5xl"><span aria-hidden="true">🔒</span> LOCKED</p>
+        <p id="locked-count" class="mt-1 text-xl font-semibold"></p>
+      </section>
       <!-- Tally -->
       <section aria-label="Plate count" class="px-4 pt-5 sm:px-7">
         <div id="tally" class="tally grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"></div>
@@ -204,6 +208,12 @@ function showFlags({ flags, live }) {
   }));
 }
 
+// ---------- caterer lock ----------
+function showLock({ locked, confirmed_plates, cost_inr }) {
+  $("locked").hidden = !locked;
+  $("locked-count").textContent = `The caterer's count is final at ${number.format(confirmed_plates)} confirmed plates, Rs ${number.format(cost_inr)}. Replies can no longer change it.`;
+}
+
 // ---------- polling: each feed on its own loop, so a slow Flagsmith never delays the plates ----------
 let offline = false;
 function poll(url, show) {
@@ -240,6 +250,7 @@ $("reset").onclick = () => {
 poll("/api/catering/impact", showImpact);
 poll("/api/households", showHouseholds);
 poll("/api/flags", showFlags);
+poll("/api/nudgebee/lock", showLock);
 </script>
 </body>
 </html>

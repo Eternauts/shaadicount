@@ -18,6 +18,7 @@ logging.getLogger("flagsmith").setLevel(logging.CRITICAL)  # a full traceback pe
 ADMIN_API = "https://api.flagsmith.com/api/v1"
 REFRESH_SECONDS = 3
 STALE_SECONDS = 20
+CATCH_UP_SECONDS = 20
 
 # Used only until Flagsmith first answers. +1s fail closed: bad wifi must not unlock them.
 DEFAULTS = {
@@ -54,6 +55,12 @@ _client = (
 )
 
 
+# Flagsmith can serve the old rules for some seconds after a change. The lock must act at once,
+# so for that long the value we just published wins.
+_lock_set_to = False
+_lock_set_until = 0.0
+
+
 def problem() -> str | None:
     """Why the flags might not be current, or None if they are live."""
     if _client is None:
@@ -81,6 +88,8 @@ def _read(fetch) -> dict:
         except FlagsmithFeatureDoesNotExistError:
             log.warning("flag %s does not exist in Flagsmith, using its default", name)
             state[name] = default
+    if time.monotonic() < _lock_set_until:
+        state["catering_lock_mode"] = {**state["catering_lock_mode"], "enabled": _lock_set_to}
     return state
 
 
@@ -166,3 +175,9 @@ def set_flag(feature_name: str, enabled: bool) -> None:
     if _client is not None:
         _client.update_environment()  # do not wait for the next background refresh
     log.info("flag %s set to %s", feature_name, enabled)
+
+
+def set_catering_lock(locked: bool) -> None:
+    global _lock_set_to, _lock_set_until
+    set_flag("catering_lock_mode", locked)
+    _lock_set_to, _lock_set_until = locked, time.monotonic() + CATCH_UP_SECONDS

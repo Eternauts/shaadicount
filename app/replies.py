@@ -41,10 +41,10 @@ REFUSALS = {
         "en-IN": "Sorry, this invitation is for {invited} people, so we cannot add extra guests. Please tell us how many of your own group are coming.",
     },
     "catering_locked": {
-        "hi-IN": "माफ़ कीजिए, खाने की गिनती अब पक्की हो चुकी है, इसलिए हम अतिरिक्त मेहमान नहीं जोड़ पाएँगे।",
-        "kn-IN": "ಕ್ಷಮಿಸಿ, ಊಟದ ಸಂಖ್ಯೆ ಈಗ ಅಂತಿಮವಾಗಿದೆ, ಹೆಚ್ಚುವರಿ ಅತಿಥಿಗಳನ್ನು ಸೇರಿಸಲು ಆಗುವುದಿಲ್ಲ.",
-        "ta-IN": "மன்னிக்கவும், உணவு எண்ணிக்கை இப்போது இறுதி செய்யப்பட்டுவிட்டது, கூடுதல் விருந்தினர்களைச் சேர்க்க முடியாது.",
-        "en-IN": "Sorry, the catering count is now final, so we cannot add extra guests.",
+        "hi-IN": "माफ़ कीजिए, खाने की गिनती अब पक्की हो चुकी है, इसलिए हम इसे बदल नहीं पाएँगे।",
+        "kn-IN": "ಕ್ಷಮಿಸಿ, ಊಟದ ಸಂಖ್ಯೆ ಈಗ ಅಂತಿಮವಾಗಿದೆ, ಇನ್ನು ಬದಲಾಯಿಸಲು ಆಗುವುದಿಲ್ಲ.",
+        "ta-IN": "மன்னிக்கவும், உணவு எண்ணிக்கை இப்போது இறுதி செய்யப்பட்டுவிட்டது, இனி மாற்ற முடியாது.",
+        "en-IN": "Sorry, the catering count is now final, so we cannot change it.",
     },
     "not_understood": {
         "hi-IN": "माफ़ कीजिए, समझ नहीं आया। कृपया बताइए कितने लोग आ रहे हैं, और खाना वेज या नॉन-वेज?",

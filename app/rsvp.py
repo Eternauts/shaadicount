@@ -43,6 +43,11 @@ def submit(
     state: dict | None = None,  # the household's flags, if the caller already read them
 ) -> dict:
     household = find_household(household_id)
+    state = state or household_flags(household)
+    if state["catering_lock_mode"]["enabled"]:  # the caterer has the final count, so nothing may change it
+        raise RsvpRejected(
+            409, "catering_locked", "The catering count is now final, so replies cannot change it."
+        )
 
     headcount, plus_ones = 0, 0
     if rsvp.attending:
@@ -53,18 +58,12 @@ def submit(
         if headcount + plus_ones == 0:
             raise RsvpRejected(422, "empty_rsvp", "Attending, but nobody is coming. How many people?")
 
-    if plus_ones > 0:
-        state = state or household_flags(household)
-        if state["catering_lock_mode"]["enabled"]:
-            raise RsvpRejected(
-                409, "catering_locked", "The catering count is now final, so we cannot add extra guests."
-            )
-        if not state["allow_plus_ones"]["enabled"]:
-            raise RsvpRejected(
-                409,
-                "plus_ones_not_allowed",
-                f"This invite is for {household['invited_count']} people and cannot include extra guests.",
-            )
+    if plus_ones > 0 and not state["allow_plus_ones"]["enabled"]:
+        raise RsvpRejected(
+            409,
+            "plus_ones_not_allowed",
+            f"This invite is for {household['invited_count']} people and cannot include extra guests.",
+        )
 
     return db.save_rsvp(
         household_id, rsvp.attending, headcount, plus_ones, rsvp.diet, channel, transcript

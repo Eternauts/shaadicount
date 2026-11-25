@@ -3,12 +3,12 @@ import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from app import catering, db, flags, replies, rsvp, sarvam, seed, voice
-from app.config import CATERER_BUFFER_PLATES, SARVAM_API_KEY
+from app.config import CATERER_BUFFER_PLATES, COST_PER_PLATE_INR, SARVAM_API_KEY
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
 logging.getLogger("httpx").setLevel(logging.WARNING)  # it would log every outgoing URL
@@ -58,9 +58,11 @@ def healthz():
 
 @app.get("/api/status")
 def status():
+    state = flags.get_environment_flags()
     return {
         "sarvam_configured": bool(SARVAM_API_KEY),
-        "allow_plus_ones": flags.get_environment_flags()["allow_plus_ones"]["enabled"],
+        "allow_plus_ones": state["allow_plus_ones"]["enabled"],
+        "catering_locked": state["catering_lock_mode"]["enabled"],
         "flagsmith_problem": flags.problem(),
         "caterer_buffer_plates": CATERER_BUFFER_PLATES,
     }
@@ -198,6 +200,36 @@ def refusal_audio(household_id: int, code: str):
         raise rsvp.RsvpRejected(404, "reply_not_found", f"No spoken reply for '{code}'.")
     audio = sarvam.speak(replies.refusal(household, code), household["language"])
     return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/nudgebee/lock")
+def lock_state():
+    plates = catering.impact()["confirmed_plates"]
+    return {
+        "locked": flags.get_environment_flags()["catering_lock_mode"]["enabled"],
+        "confirmed_plates": plates,
+        "cost_inr": plates * COST_PER_PLATE_INR,
+    }
+
+
+async def wants_lock(request: Request) -> bool:
+    """Only an explicit {"locked": false} unlocks. No body, or one we cannot read, means lock."""
+    try:
+        return str((await request.json())["locked"]).lower() != "false"
+    except (ValueError, KeyError, TypeError):
+        return True
+
+
+@app.post("/api/nudgebee/lock")
+def lock(locked: bool = Depends(wants_lock)):
+    flags.set_catering_lock(locked)
+    return lock_state()
+
+
+@app.post("/api/nudgebee/unlock")
+def unlock():
+    flags.set_catering_lock(False)
+    return lock_state()
 
 
 @app.get("/api/caterer.csv")
