@@ -21,6 +21,7 @@ How can an Indian wedding host stop losing lakhs to catering over-orders or shor
 | `SARVAM_API_KEY` | Speech to text, extraction, text to speech |
 | `FLAGSMITH_SERVER_ENVIRONMENT_KEY` | Reading flags on the server |
 | `FLAGSMITH_CLIENT_ENVIRONMENT_KEY` | Public environment key |
+| `FLAGSMITH_ENVIRONMENT_API_KEY` | Optional. Which environment the Admin API changes. Defaults to the client key |
 | `FLAGSMITH_ADMIN_TOKEN` | Changing flags through the Admin API |
 | `CATERER_BUFFER_PLATES`, `COST_PER_PLATE_INR` | Optional, default 400 and 1500 |
 

@@ -9,8 +9,12 @@ SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
 
 FLAGSMITH_CLIENT_ENVIRONMENT_KEY = os.getenv("FLAGSMITH_CLIENT_ENVIRONMENT_KEY", "")
 FLAGSMITH_SERVER_ENVIRONMENT_KEY = os.getenv("FLAGSMITH_SERVER_ENVIRONMENT_KEY", "")
-# Organisation API key, needed only to change flags (Phase 4). Not the same as the keys above.
+# Organisation API key, needed only to change flags. Not the same as the keys above.
 FLAGSMITH_ADMIN_TOKEN = os.getenv("FLAGSMITH_ADMIN_TOKEN", "")
+# Which environment the Admin API changes. Flagsmith uses the client-side key as its id.
+FLAGSMITH_ENVIRONMENT_API_KEY = (
+    os.getenv("FLAGSMITH_ENVIRONMENT_API_KEY") or FLAGSMITH_CLIENT_ENVIRONMENT_KEY
+)
 
 # "or" so that an empty value in .env still falls back to the default.
 CATERER_BUFFER_PLATES = int(os.getenv("CATERER_BUFFER_PLATES") or 400)

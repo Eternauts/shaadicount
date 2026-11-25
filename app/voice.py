@@ -11,6 +11,10 @@ SAMPLE_TYPES = {".wav", ".mp3", ".m4a", ".ogg", ".opus", ".webm", ".aac"}
 
 def submit(audio: bytes, filename: str, household_id: int, channel: str) -> dict:
     household = rsvp.find_household(household_id)  # before spending any Sarvam credits
+    if rsvp.household_flags(household)["voice_fallback_text"]["enabled"]:
+        raise rsvp.RsvpRejected(
+            503, "voice_disabled", "Please use the form for your RSVP.", fallback="text"
+        )
     if len(audio) > MAX_AUDIO_BYTES:
         raise rsvp.RsvpRejected(413, "audio_too_large", "That recording is too large.")
 
@@ -31,7 +35,7 @@ def submit(audio: bytes, filename: str, household_id: int, channel: str) -> dict
             )
         saved = rsvp.submit(household_id, parsed, channel, heard["transcript"])
     except rsvp.RsvpRejected as exc:
-        exc.extra = understood  # so the guest sees what we heard, even on a rejection
+        exc.extra |= understood  # so the guest sees what we heard, even on a rejection
         raise
 
     return {

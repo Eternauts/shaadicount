@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app import db
+from app import db, flags
 
 Diet = Literal["veg", "non_veg", "jain", "mixed"]
 
@@ -18,20 +18,14 @@ class Rsvp(BaseModel):
 class RsvpRejected(Exception):
     """Becomes a JSON error response in main.py."""
 
-    def __init__(self, status: int, code: str, message: str):
+    def __init__(self, status: int, code: str, message: str, **extra):
         super().__init__(message)
         self.status, self.code, self.message = status, code, message
-        self.extra: dict = {}  # more fields for the response, such as what voice heard
+        self.extra = extra  # more fields for the response, such as what voice heard
 
 
-def plus_ones_allowed(household: dict) -> bool:
-    """Stub: Phase 4 asks Flagsmith for this household's allow_plus_ones."""
-    return household["segment"] == "close_family"
-
-
-def catering_locked() -> bool:
-    """Stub: Phase 4 reads the catering_lock_mode flag."""
-    return False
+def household_flags(household: dict) -> dict:
+    return flags.get_identity_flags(household["id"], {"segment": household["segment"]})
 
 
 def find_household(household_id: int) -> dict:
@@ -54,11 +48,12 @@ def submit(household_id: int, rsvp: Rsvp, channel: str, transcript: str | None =
             raise RsvpRejected(422, "empty_rsvp", "Attending, but nobody is coming. How many people?")
 
     if plus_ones > 0:
-        if catering_locked():
+        state = household_flags(household)
+        if state["catering_lock_mode"]["enabled"]:
             raise RsvpRejected(
                 409, "catering_locked", "The catering count is now final, so we cannot add extra guests."
             )
-        if not plus_ones_allowed(household):
+        if not state["allow_plus_ones"]["enabled"]:
             raise RsvpRejected(
                 409,
                 "plus_ones_not_allowed",

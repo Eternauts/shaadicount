@@ -39,6 +39,13 @@ def sarvam_failed(request: Request, exc: sarvam.SarvamError):
     )
 
 
+@app.exception_handler(flags.FlagUpdateError)
+def flag_update_failed(request: Request, exc: flags.FlagUpdateError):
+    return JSONResponse(
+        status_code=502, content={"error": "flag_update_failed", "message": str(exc)}
+    )
+
+
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
@@ -48,10 +55,21 @@ def healthz():
 def status():
     return {
         "sarvam_configured": bool(SARVAM_API_KEY),
-        "allow_plus_ones": flags.is_enabled("allow_plus_ones", default=True),
+        "allow_plus_ones": flags.get_environment_flags()["allow_plus_ones"]["enabled"],
         "flagsmith_last_error": flags.last_error,
         "caterer_buffer_plates": CATERER_BUFFER_PLATES,
     }
+
+
+@app.get("/api/flags")
+def flag_state(household_id: int | None = None):
+    """All four flags: the environment defaults, or what one household gets."""
+    if household_id is None:
+        state = flags.get_environment_flags()
+    else:
+        state = rsvp.household_flags(rsvp.find_household(household_id))
+    # live is false when Flagsmith did not answer and these are the last known values.
+    return {"flags": state, "live": flags.last_error is None, "error": flags.last_error}
 
 
 @app.get("/api/households")
