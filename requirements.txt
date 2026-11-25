@@ -1,7 +1,8 @@
-fastapi==0.115.*
-uvicorn[standard]==0.32.*
-flagsmith>=3.8
-sarvamai
-python-dotenv
-httpx
-python-multipart
+# Exact versions: the container runs Python 3.12 and would otherwise pick newer SDKs than we tested.
+fastapi==0.115.14
+uvicorn[standard]==0.32.1
+flagsmith==3.10.1
+sarvamai==0.1.49
+python-dotenv==1.2.4
+httpx==0.28.1
+python-multipart==0.0.34
