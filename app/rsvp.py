@@ -5,12 +5,14 @@ from pydantic import BaseModel, Field
 
 from app import db
 
+Diet = Literal["veg", "non_veg", "jain", "mixed"]
+
 
 class Rsvp(BaseModel):
     attending: bool
     headcount: int = Field(ge=0, le=200)  # invited people who are coming
     plus_ones: int = Field(default=0, ge=0, le=100)  # extra people on top of headcount
-    diet: Literal["veg", "non_veg", "jain", "mixed"] = "mixed"
+    diet: Diet = "mixed"
 
 
 class RsvpRejected(Exception):
@@ -19,6 +21,7 @@ class RsvpRejected(Exception):
     def __init__(self, status: int, code: str, message: str):
         super().__init__(message)
         self.status, self.code, self.message = status, code, message
+        self.extra: dict = {}  # more fields for the response, such as what voice heard
 
 
 def plus_ones_allowed(household: dict) -> bool:
@@ -31,10 +34,15 @@ def catering_locked() -> bool:
     return False
 
 
-def submit(household_id: int, rsvp: Rsvp, channel: str, transcript: str | None = None) -> dict:
+def find_household(household_id: int) -> dict:
     household = db.get_household(household_id)
     if household is None:
         raise RsvpRejected(404, "household_not_found", f"No household with id {household_id}.")
+    return household
+
+
+def submit(household_id: int, rsvp: Rsvp, channel: str, transcript: str | None = None) -> dict:
+    household = find_household(household_id)
 
     headcount, plus_ones = 0, 0
     if rsvp.attending:

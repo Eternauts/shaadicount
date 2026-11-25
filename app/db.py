@@ -111,3 +111,9 @@ def save_rsvp(
             rsvp,
         )
     return {"id": cursor.lastrowid, **rsvp}
+
+
+def get_rsvp(rsvp_id: int) -> dict | None:
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM rsvps WHERE id = ?", (rsvp_id,)).fetchone()
+    return dict(row) if row else None

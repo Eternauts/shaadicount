@@ -1,10 +1,14 @@
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import JSONResponse, Response
 
-from app import catering, db, flags, rsvp, seed
+from app import catering, db, flags, replies, rsvp, sarvam, seed, voice
 from app.config import CATERER_BUFFER_PLATES, SARVAM_API_KEY
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+logging.getLogger("httpx").setLevel(logging.WARNING)  # it would log every outgoing URL
 
 
 @asynccontextmanager
@@ -18,7 +22,21 @@ app = FastAPI(title="ShaadiCount", lifespan=lifespan)
 
 @app.exception_handler(rsvp.RsvpRejected)
 def rsvp_rejected(request: Request, exc: rsvp.RsvpRejected):
-    return JSONResponse(status_code=exc.status, content={"error": exc.code, "message": exc.message})
+    content = {"error": exc.code, "message": exc.message, **exc.extra}
+    return JSONResponse(status_code=exc.status, content=content)
+
+
+@app.exception_handler(sarvam.SarvamError)
+def sarvam_failed(request: Request, exc: sarvam.SarvamError):
+    return JSONResponse(
+        status_code=502,
+        content={
+            "error": f"voice_{exc.step}_failed",
+            "message": "Voice is not available right now. Please use the form.",
+            "detail": exc.message,
+            "fallback": "text",
+        },
+    )
 
 
 @app.get("/healthz")
@@ -48,6 +66,30 @@ class TextRsvp(rsvp.Rsvp):
 @app.post("/api/rsvp/text")
 def rsvp_text(body: TextRsvp):
     return rsvp.submit(body.household_id, body, channel="web_text")
+
+
+@app.post("/api/rsvp/voice")
+def rsvp_voice(audio: UploadFile = File(), household_id: int = Form()):
+    # Read one byte past the limit: enough to reject a huge upload without loading it all.
+    data = audio.file.read(voice.MAX_AUDIO_BYTES + 1)
+    return voice.submit(data, audio.filename or "", household_id, channel="web_voice")
+
+
+@app.post("/api/rsvp/voice/sample/{name}")
+def rsvp_voice_sample(name: str, household_id: int = 1):
+    data, filename = voice.load_sample(name)
+    return voice.submit(data, filename, household_id, channel="web_voice")
+
+
+@app.get("/api/rsvp/{rsvp_id}/reply-audio")
+def reply_audio(rsvp_id: int):
+    saved = db.get_rsvp(rsvp_id)
+    if saved is None:
+        raise rsvp.RsvpRejected(404, "rsvp_not_found", f"No RSVP with id {rsvp_id}.")
+    language = rsvp.find_household(saved["household_id"])["language"]
+    audio = sarvam.speak(replies.confirmation(language, saved), language)
+    # no-store: RSVP ids start again after a demo reset, so a cached reply could be wrong.
+    return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/catering/impact")
