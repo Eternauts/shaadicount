@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShaadiCount: the host's ledger</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%238C0F1F'/><path d='M7 6v20' stroke='%23FFF6E0' stroke-width='2' stroke-dasharray='3 2'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rozha+One&family=Hind:wght@400;500;600&display=swap">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  if (window.tailwind) tailwind.config = { theme: { extend: {
+    colors: { sindoor: "#8C0F1F", maroon: "#5E0714", haldi: "#E0A526", cream: "#FFF6E0", ink: "#3A0A10", mehendi: "#2F7D4F", genda: "#C77700" },
+    fontFamily: { display: ["Rozha One", "serif"], sans: ["Hind", "sans-serif"] } } } };
+</script>
+<style>
+  /* A bahi-khata: red cloth cover, white binding thread, cream ruled pages. */
+  body { background: #8C0F1F; color: #3A0A10; font-family: Hind, sans-serif; }
+  [hidden] { display: none !important; }
+  .page { background: #FFF6E0; }
+  .binding { background: repeating-linear-gradient(to bottom, #FFF6E0 0 14px, transparent 14px 26px); width: 3px; }
+  .tally > div { border-left: 4px double #8C0F1F; }
+  .tally > div:first-child { border-left: 0; }
+  @media (min-width: 640px) and (max-width: 1023px) { .tally > div:nth-child(3n + 1) { border-left: 0; } }
+  @media (max-width: 639px)  { .tally > div { border-left: 4px double #8C0F1F; } .tally > div:nth-child(odd) { border-left: 0; } }
+  td, th { font-variant-numeric: tabular-nums; }
+  tbody tr { border-top: 1px solid #E3C9A0; }
+  :focus-visible { outline: 3px solid #E0A526; outline-offset: 2px; }
+  .seg { transition: width .5s ease; }
+  .hatch { background: repeating-linear-gradient(135deg, #B79A73 0 3px, #F3E2C0 3px 9px); }
+  .flash { animation: flash 1.6s ease-out; }
+  @keyframes flash { from { background: #F6D77E; } to { background: transparent; } }
+  @media (prefers-reduced-motion: reduce) { .seg { transition: none; } .flash { animation: none; } }
+</style>
+</head>
+<body class="min-h-screen bg-sindoor text-ink font-sans">
+<div class="mx-auto flex max-w-7xl gap-4 px-3 py-5 sm:px-6">
+  <div class="binding hidden shrink-0 sm:block" aria-hidden="true"></div>
+  <div class="min-w-0 flex-1">
+
+    <header class="mb-4 flex flex-wrap items-end justify-between gap-4 text-cream">
+      <div>
+        <h1 class="font-display text-4xl leading-none sm:text-5xl">ShaadiCount</h1>
+        <p class="mt-2 text-lg">Ananya weds Kabir, 12 December 2026, Jaipur</p>
+      </div>
+      <div class="flex flex-wrap gap-2 text-base font-semibold">
+        <button id="blast" class="rounded bg-haldi px-4 py-2.5 text-ink disabled:opacity-60">Simulate WhatsApp Blast</button>
+        <a href="/api/caterer.csv" class="rounded border-2 border-cream px-4 py-2">Export caterer CSV</a>
+        <button id="reset" class="rounded border-2 border-cream px-4 py-2 disabled:opacity-60">Reset demo</button>
+      </div>
+    </header>
+
+    <p id="message" class="mb-3 rounded bg-cream px-4 py-2 font-semibold" role="status" hidden></p>
+
+    <main class="page bg-cream rounded-sm">
+      <!-- Tally -->
+      <section aria-label="Plate count" class="px-4 pt-5 sm:px-7">
+        <div id="tally" class="tally grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"></div>
+
+        <div class="mt-6 mb-2 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <h2 id="bar-title" class="text-xl font-semibold"></h2>
+          <ul class="flex flex-wrap gap-x-5 text-base">
+            <li class="flex items-center gap-2"><span class="h-3.5 w-3.5 bg-mehendi"></span>Confirmed</li>
+            <li class="flex items-center gap-2"><span class="h-3.5 w-3.5 bg-genda"></span>Confirmed +1s</li>
+            <li class="flex items-center gap-2"><span class="hatch h-3.5 w-3.5"></span>Invited, not replied</li>
+          </ul>
+        </div>
+        <div class="relative pt-7 pb-6">
+          <div id="bar" class="flex h-9 w-full gap-0.5" role="img"></div>
+          <div id="buffer-line" class="absolute top-0 bottom-0 w-0 border-l-[3px] border-ink">
+            <span id="buffer-label" class="absolute top-0 right-2 whitespace-nowrap text-base font-semibold leading-none"></span>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid gap-x-8 gap-y-6 border-t-4 border-double border-sindoor px-4 py-5 sm:px-7 lg:grid-cols-[1fr_20rem]">
+        <!-- Households -->
+        <section aria-label="Households" class="min-w-0 overflow-x-auto">
+          <table class="w-full text-left text-base">
+            <thead><tr class="text-sindoor">
+              <th class="py-2 pr-3 font-semibold">Household</th><th class="pr-3 font-semibold">Segment</th>
+              <th class="pr-3 text-right font-semibold">Invited</th><th class="pr-3 font-semibold">Status</th>
+              <th class="pr-3 text-right font-semibold">Plates</th><th class="pr-3 font-semibold">Food</th>
+              <th class="font-semibold">Channel</th>
+            </tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </section>
+
+        <!-- Flags -->
+        <section aria-label="Flagsmith flags" class="lg:border-l-4 lg:border-double lg:border-sindoor lg:pl-6">
+          <h2 class="text-xl font-semibold">Rules from Flagsmith</h2>
+          <p id="flags-source" class="text-base"></p>
+          <dl id="flags" class="mt-3"></dl>
+          <p class="mt-4 text-base">These are the defaults. A segment such as close family can have its own setting.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const number = new Intl.NumberFormat("en-IN");
+const SEGMENT = { close_family: "Close family", relatives: "Relatives", colleagues: "Colleagues" };
+const STATUS = { pending: ["○", "Not replied"], confirmed: ["✓", "Confirmed"], declined: ["✕", "Not coming"] };
+const CHANNEL = { web_voice: "Voice", web_text: "Form", whatsapp: "WhatsApp" };
+const DIET = { veg: "Veg", non_veg: "Non-veg", jain: "Jain", mixed: "Mixed" };
+const FLAG = {
+  allow_plus_ones: "Guests may bring +1s", catering_lock_mode: "Catering count is locked",
+  voice_fallback_text: "Voice is off, use the form", rsvp_prompt_variant: "Invite wording test",
+};
+
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+async function getJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(response.status);
+  return response.json();
+}
+
+// ---------- plate count ----------
+function showImpact(m) {
+  const over = m.buffer_breached;
+  const cells = [
+    ["Invited", m.invited_plates], ["Confirmed", m.confirmed_plates], ["Predicted plates", m.predicted_plates],
+    ["Caterer buffer", m.buffer_plates], ["Overflow plates", m.overflow_plates, true], ["Overflow cost", `Rs ${number.format(m.overflow_cost_inr)}`, true],
+  ];
+  $("tally").replaceChildren(...cells.map(([label, value, alarm]) => {
+    const cell = element("div", `px-3 py-2 sm:px-4 ${alarm && over ? "bg-sindoor text-cream" : ""}`);
+    cell.append(
+      element("p", "text-base", label),
+      element("p", "font-display text-[1.7rem] sm:text-4xl leading-tight whitespace-nowrap", typeof value === "number" ? number.format(value) : value),
+    );
+    return cell;
+  }));
+
+  $("bar-title").textContent = over
+    ? `⚠ ${m.overflow_plates} plates over the caterer's buffer`
+    : `${m.buffer_plates - m.predicted_plates} plates still free in the caterer's buffer`;
+  $("bar-title").className = `text-xl font-semibold ${over ? "text-sindoor" : ""}`;
+
+  const scale = Math.max(m.buffer_plates * 1.2, m.predicted_plates * 1.03);
+  const parts = [
+    ["Confirmed", m.confirmed_plates - m.confirmed_plus_ones, "bg-mehendi text-white"],
+    ["Confirmed +1s", m.confirmed_plus_ones, "bg-genda text-white"],
+    ["Invited, not replied", m.expected_from_pending, "hatch"],
+  ];
+  if (!$("bar").children.length) $("bar").append(...parts.map(() => element("div")));
+  parts.forEach(([label, plates, look], i) => {
+    const seg = $("bar").children[i];
+    const share = (plates / scale) * 100;
+    seg.className = `seg shrink-0 overflow-hidden text-center text-base font-semibold leading-9 ${look}`;
+    seg.style.width = `${share}%`;
+    seg.title = `${label}: ${plates} plates`;
+    seg.textContent = share > 5 && !look.includes("hatch") ? plates : "";
+  });
+  $("bar").setAttribute("aria-label", parts.map(([label, plates]) => `${label} ${plates}`).join(", "));
+  $("buffer-line").style.left = `${(m.buffer_plates / scale) * 100}%`;
+  $("buffer-label").textContent = `Buffer ${m.buffer_plates}`;
+}
+
+// ---------- households ----------
+const seen = new Map();  // household id -> last RSVP id, to highlight what just changed
+function showHouseholds(households) {
+  $("rows").replaceChildren(...households.map((h) => {
+    const changed = seen.has(h.id) && seen.get(h.id) !== h.rsvp_id;
+    seen.set(h.id, h.rsvp_id);
+    const row = element("tr", changed ? "flash" : "");
+    const name = element("td", "py-2 pr-3");
+    const link = element("a", "font-semibold underline decoration-haldi decoration-2 underline-offset-4", h.name);
+    link.href = `/invite/${h.id}`; link.target = "_blank";
+    name.append(link);
+    const [mark, label] = STATUS[h.status];
+    const status = element("td", "pr-3 whitespace-nowrap");
+    const sign = element("span", `mr-1.5 font-semibold ${h.status === "confirmed" ? "text-mehendi" : h.status === "declined" ? "text-sindoor" : ""}`, mark);
+    sign.setAttribute("aria-hidden", "true");
+    status.append(sign, label);
+    const coming = h.status === "confirmed";
+    const plates = !coming ? (h.status === "pending" ? "" : "0") : h.plus_ones ? `${h.headcount} + ${h.plus_ones}` : h.headcount;
+    row.append(
+      name, element("td", "pr-3 whitespace-nowrap", SEGMENT[h.segment]), element("td", "pr-3 text-right", h.invited_count), status,
+      element("td", "pr-3 text-right whitespace-nowrap", plates), element("td", "pr-3 whitespace-nowrap", coming ? DIET[h.diet] : ""), element("td", "", CHANNEL[h.channel] || ""),
+    );
+    return row;
+  }));
+}
+
+// ---------- flags ----------
+function showFlags({ flags, live }) {
+  $("flags-source").textContent = live ? "Live" : "Flagsmith is not reachable. Showing the last known rules.";
+  $("flags").replaceChildren(...Object.entries(flags).map(([name, flag]) => {
+    const row = element("div", "flex items-center justify-between gap-3 border-t border-[#E3C9A0] py-2.5");
+    const label = element("dt");
+    label.append(element("span", "block font-semibold leading-tight", FLAG[name]), element("span", "block text-sm", name));
+    const isOn = flag.enabled;
+    const state = element("dd", `shrink-0 rounded px-3 py-1 font-semibold ${isOn ? (name === "catering_lock_mode" ? "bg-sindoor text-cream" : "bg-mehendi text-white") : "border-2 border-[#B79A73]"}`, isOn ? "On" : "Off");
+    row.append(label, state);
+    return row;
+  }));
+}
+
+// ---------- polling: each feed on its own loop, so a slow Flagsmith never delays the plates ----------
+let offline = false;
+function poll(url, show) {
+  (async function run() {
+    try {
+      show(await getJson(url));
+      if (offline) { offline = false; $("message").hidden = true; }
+    } catch { offline = true; say("The server is not answering. Trying again."); }
+    setTimeout(run, 3000);
+  })();
+}
+function say(text) { $("message").textContent = text; $("message").hidden = false; }
+
+async function refreshNow() {
+  const [impact, households] = await Promise.all([getJson("/api/catering/impact"), getJson("/api/households")]);
+  showImpact(impact); showHouseholds(households);
+}
+async function act(button, url, working, done) {
+  button.disabled = true; say(working);
+  try {
+    const response = await fetch(url, { method: "POST" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    await refreshNow(); say(done);
+    setTimeout(() => { if (!offline) $("message").hidden = true; }, 5000);
+  } catch (error) { say(`That did not work (${error.message}).`); }
+  button.disabled = false;
+}
+$("blast").onclick = () => act($("blast"), "/api/demo/blast", "Sending the blast", "The blast replies are in.");
+$("reset").onclick = () => {
+  if (confirm("Delete all replies and go back to the starting guest list?"))
+    act($("reset"), "/api/demo/reset", "Resetting", "Back to the starting guest list.");
+};
+
+poll("/api/catering/impact", showImpact);
+poll("/api/households", showHouseholds);
+poll("/api/flags", showFlags);
+</script>
+</body>
+</html>

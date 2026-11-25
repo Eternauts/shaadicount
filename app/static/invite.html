@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ananya weds Kabir: your reply</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%23E9860C'/><circle cx='16' cy='16' r='7' fill='%238C0F1F'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rozha+One&family=Hind:wght@400;500;600&family=Hind+Madurai:wght@400;600&family=Hind+Mysuru:wght@400;600&display=swap">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  if (window.tailwind) tailwind.config = { theme: { extend: {
+    colors: { sindoor: "#8C0F1F", maroon: "#5E0714", haldi: "#E0A526", genda: "#E9860C", cream: "#FFF6E0", ink: "#3A0A10", mehendi: "#2F7D4F" },
+    fontFamily: { display: ["Rozha One", "Hind Madurai", "Hind Mysuru", "serif"], sans: ["Hind", "Hind Madurai", "Hind Mysuru", "sans-serif"] } } } };
+</script>
+<style>
+  /* Colours are repeated here so the page still looks right if the Tailwind CDN is slow. */
+  body { background: #8C0F1F; color: #3A0A10; font-family: Hind, "Hind Madurai", "Hind Mysuru", sans-serif; }
+  [hidden] { display: none !important; }
+  .card { background: #FFF6E0; }
+  :focus-visible { outline: 3px solid #E0A526; outline-offset: 3px; }
+
+  #mic { --level: 0; width: 208px; height: 208px; }
+  #mic svg { width: 100%; height: 100%; overflow: visible; }
+  #mic .ring { transform-origin: 100px 100px; transition: transform 90ms linear; }
+  /* Petals open with the speaker's volume, outer ring furthest. */
+  #mic .ring-3 { transform: scale(calc(1 + var(--level) * .22)) rotate(calc(var(--level) * 10deg)); }
+  #mic .ring-2 { transform: scale(calc(1 + var(--level) * .12)) rotate(calc(var(--level) * -8deg)); }
+  #mic[data-state="busy"] .ring { animation: turn 2.4s linear infinite; }
+  #mic[data-state="busy"] .ring-2 { animation-direction: reverse; }
+  #mic:disabled { cursor: wait; }
+  @keyframes turn { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #mic .ring { animation: none !important; transform: none !important; } }
+
+  input[type="radio"] { position: absolute; opacity: 0; }
+  .choice:has(input:checked) { background: #8C0F1F; color: #FFF6E0; border-color: #8C0F1F; }
+  .choice:has(input:focus-visible) { outline: 3px solid #E0A526; outline-offset: 2px; }
+</style>
+</head>
+<body class="min-h-screen bg-sindoor text-ink font-sans text-lg leading-relaxed">
+
+<main class="mx-auto w-full max-w-md px-4 pt-6 pb-12">
+  <!-- Jharokha arch: the top edge of the invitation card -->
+  <svg viewBox="0 0 400 132" preserveAspectRatio="none" class="block w-full h-28" aria-hidden="true">
+    <path fill="#FFF6E0" d="M0 132 V118 C22 116 34 104 40 92 C62 92 78 82 84 66 C106 66 122 56 130 40 C150 40 166 32 174 20 C184 18 194 10 200 0 C206 10 216 18 226 20 C234 32 250 40 270 40 C278 56 294 66 316 66 C322 82 338 92 360 92 C366 104 378 116 400 118 V132 Z"/>
+    <path fill="none" stroke="#E0A526" stroke-width="2.5" vector-effect="non-scaling-stroke" d="M10 132 V126 C30 122 42 112 48 100 C68 99 84 90 91 74 C112 73 128 64 136 48 C156 47 170 40 178 28 C188 25 195 18 200 11 C205 18 212 25 222 28 C230 40 244 47 264 48 C272 64 288 73 309 74 C316 90 332 99 352 100 C358 112 370 122 390 126 V132"/>
+  </svg>
+
+  <div class="card bg-cream px-6 pb-9 text-center rounded-b-sm">
+    <p class="font-display text-[2.6rem] leading-[1.05] text-sindoor -mt-5">Ananya<br>weds Kabir</p>
+    <p class="mt-2">Saturday, 12 December 2026, Jaipur</p>
+
+    <div id="loading" class="py-16">Opening your invitation</div>
+    <div id="invalid" class="py-12" hidden>This invitation link is not valid. Ask the family to send it again.</div>
+
+    <div id="invite" hidden>
+      <div class="my-6 h-0.5 bg-haldi" aria-hidden="true"></div>
+      <h1 id="greeting" class="font-display text-2xl leading-snug"></h1>
+      <p id="prompt" class="mt-3 text-xl leading-relaxed"></p>
+      <p id="notice" class="mt-4 rounded border-2 border-haldi bg-white/60 px-4 py-2 text-base" hidden></p>
+
+      <!-- Voice -->
+      <section id="voice" aria-label="Reply by voice">
+        <button id="mic" type="button" data-state="idle" aria-describedby="mic-status" class="mx-auto mt-7 block rounded-full">
+          <svg viewBox="0 0 200 200" aria-hidden="true">
+            <g id="petals"></g>
+            <circle cx="100" cy="100" r="38" fill="#8C0F1F"/>
+            <g id="mic-icon" fill="#FFF6E0">
+              <rect x="91" y="76" width="18" height="30" rx="9"/>
+              <path d="M83 96v4a17 17 0 0 0 34 0v-4h-5v4a12 12 0 0 1-24 0v-4z"/>
+              <rect x="97.500" y="116" width="5" height="9"/>
+            </g>
+            <rect id="stop-icon" x="87" y="87" width="26" height="26" rx="4" fill="#FFF6E0" style="display:none"/>
+          </svg>
+          <span class="sr-only">Record your reply</span>
+        </button>
+        <p id="mic-status" class="mt-4 text-xl font-semibold" role="status">Tap the flower and speak</p>
+        <div id="samples" class="mt-6" hidden>
+          <p class="text-base">No microphone? Use a sample voice note</p>
+          <div id="sample-buttons" class="mt-2 flex flex-wrap justify-center gap-2"></div>
+        </div>
+      </section>
+
+      <!-- What happened -->
+      <section id="result" class="mt-7 rounded border-2 p-5 text-left" tabindex="-1" hidden>
+        <h2 id="result-title" class="font-display text-2xl leading-tight"></h2>
+        <p id="result-message" class="mt-2" hidden></p>
+        <blockquote id="result-transcript" class="mt-3 border-l-4 border-haldi pl-3" hidden></blockquote>
+        <dl id="result-facts" class="mt-4 grid grid-cols-3 gap-2 text-center" hidden></dl>
+        <p id="result-reply" class="mt-4" hidden></p>
+        <button id="play-reply" type="button" class="mt-4 w-full rounded bg-sindoor px-4 py-3 text-lg font-semibold text-cream" hidden>Play the reply</button>
+        <button id="without-extra" type="button" class="mt-4 w-full rounded bg-sindoor px-4 py-3 text-lg font-semibold text-cream" hidden>Reply without extra guests</button>
+      </section>
+
+      <button id="show-form" type="button" class="mt-6 text-lg font-semibold text-sindoor underline underline-offset-4">Type your reply instead</button>
+
+      <!-- Text form -->
+      <form id="form" class="mt-6 space-y-5 text-left" hidden>
+        <fieldset>
+          <legend class="font-semibold">Will you come?</legend>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-center">
+            <label class="choice relative cursor-pointer rounded border-2 border-sindoor px-3 py-3"><input type="radio" name="attending" value="yes" checked>Yes</label>
+            <label class="choice relative cursor-pointer rounded border-2 border-sindoor px-3 py-3"><input type="radio" name="attending" value="no">No</label>
+          </div>
+        </fieldset>
+        <div id="when-attending" class="space-y-5">
+          <div>
+            <label for="headcount" class="font-semibold">How many of you? <span id="invited-hint" class="font-normal"></span></label>
+            <div class="mt-2 flex" data-stepper="headcount"></div>
+          </div>
+          <div id="plus-ones-field">
+            <label for="plus_ones" class="font-semibold">Extra guests</label>
+            <div class="mt-2 flex" data-stepper="plus_ones"></div>
+          </div>
+          <fieldset>
+            <legend class="font-semibold">Food</legend>
+            <div class="mt-2 grid grid-cols-2 gap-2 text-center">
+              <label class="choice relative cursor-pointer rounded border-2 border-sindoor px-3 py-3"><input type="radio" name="diet" value="veg" checked>Veg</label>
+              <label class="choice relative cursor-pointer rounded border-2 border-sindoor px-3 py-3"><input type="radio" name="diet" value="non_veg">Non-veg</label>
+              <label class="choice relative cursor-pointer rounded border-2 border-sindoor px-3 py-3"><input type="radio" name="diet" value="jain">Jain</label>
+              <label class="choice relative cursor-pointer rounded border-2 border-sindoor px-3 py-3"><input type="radio" name="diet" value="mixed">Some of each</label>
+            </div>
+          </fieldset>
+        </div>
+        <button type="submit" class="w-full rounded bg-sindoor px-4 py-4 text-xl font-semibold text-cream">Send reply</button>
+      </form>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const householdId = Number(location.pathname.split("/").pop());
+const HELLO = { "hi-IN": "नमस्ते", "kn-IN": "ನಮಸ್ಕಾರ", "ta-IN": "வணக்கம்", "en-IN": "Namaste" };
+const PROMPTS = {  // chosen by the Flagsmith flag rsvp_prompt_variant
+  direct: ["en", "How many of you are coming? Tell us the number, and veg or non-veg."],
+  polite_hindi: ["hi", "आप सपरिवार पधारें, यही हमारी इच्छा है। कृपया बताइए, कितने लोग आ रहे हैं और खाना कैसा रहेगा?"],
+};
+const DIET = { veg: "Veg", non_veg: "Non-veg", jain: "Jain", mixed: "Mixed" };
+const MAX_RECORDING_MS = 28000;  // Saaras accepts up to 30 seconds
+let invite = null, recorder = null, replyAudio = null;
+
+// ---------- marigold ----------
+function drawPetals() {
+  const petal = "M100 100 C86 76 86 %TOP% 92 %TIP% Q96 %NOTCH% 100 %TIP% Q104 %NOTCH% 108 %TIP% C114 %TOP% 114 76 100 100 Z";
+  const rings = [["ring-3", 18, 30, 12, "#E9860C"], ["ring-2", 14, 46, 32, "#F2A61E"], ["ring-1", 10, 58, 48, "#E0A526"]];
+  $("petals").innerHTML = rings.map(([name, count, top, tip, fill], ring) => {
+    const d = petal.replaceAll("%TOP%", top).replaceAll("%TIP%", tip).replaceAll("%NOTCH%", tip - 7);
+    const one = (i) => `<path d="${d}" fill="${fill}" stroke="#B85C00" stroke-width=".8" transform="rotate(${(360 / count) * i + ring * 9} 100 100)"/>`;
+    return `<g class="ring ${name}">${Array.from({ length: count }, (_, i) => one(i)).join("")}</g>`;
+  }).join("");
+}
+
+function setMic(state, message) {
+  $("mic").dataset.state = state;
+  $("mic").disabled = state === "busy";
+  $("mic").setAttribute("aria-pressed", state === "recording");
+  $("mic-icon").style.display = state === "recording" ? "none" : "";
+  $("stop-icon").style.display = state === "recording" ? "" : "none";
+  $("mic-status").textContent = message;
+  for (const b of $("sample-buttons").children) b.disabled = state !== "idle";
+}
+
+// ---------- steppers ----------
+const counts = { headcount: 1, plus_ones: 0 };
+for (const box of document.querySelectorAll("[data-stepper]")) {
+  const name = box.dataset.stepper;
+  const button = "h-14 w-14 shrink-0 rounded border-2 border-sindoor text-2xl font-semibold text-sindoor";
+  box.innerHTML = `<button type="button" class="${button}" aria-label="One fewer">&minus;</button>
+    <input id="${name}" inputmode="numeric" class="mx-2 h-14 w-full rounded border-2 border-sindoor bg-white text-center text-2xl">
+    <button type="button" class="${button}" aria-label="One more">+</button>`;
+  const [minus, plus] = box.querySelectorAll("button"), input = box.querySelector("input");
+  const set = (n) => { counts[name] = Math.min(200, Math.max(0, n || 0)); input.value = counts[name]; };
+  minus.onclick = () => set(counts[name] - 1);
+  plus.onclick = () => set(counts[name] + 1);
+  input.onchange = () => set(parseInt(input.value, 10));
+  box.set = set;
+}
+const setCount = (name, n) => document.querySelector(`[data-stepper="${name}"]`).set(n);
+
+// ---------- showing things (textContent only: transcripts are untrusted) ----------
+function showResult({ good, title, message, transcript, rsvp, replyText, audioUrl, offerWithoutExtra }) {
+  const box = $("result");
+  box.className = `mt-7 rounded border-2 p-5 text-left ${good ? "border-mehendi" : "border-sindoor"} bg-white/70`;
+  $("result-title").textContent = title;
+  const put = (id, text) => { $(id).textContent = text || ""; $(id).hidden = !text; };
+  put("result-message", message);
+  put("result-transcript", transcript);
+  put("result-reply", replyText);
+  const facts = rsvp && rsvp.attending
+    ? [["Guests", rsvp.headcount], ["Extra", rsvp.plus_ones], ["Food", DIET[rsvp.diet]]] : [];
+  $("result-facts").hidden = !facts.length;
+  $("result-facts").replaceChildren(...facts.map(([label, value]) => {
+    const cell = document.createElement("div");
+    const dt = document.createElement("dt"), dd = document.createElement("dd");
+    cell.className = "flex flex-col rounded bg-cream px-1 py-2";
+    dt.className = "text-base leading-tight"; dt.textContent = label;
+    dd.className = "mt-1 font-display text-2xl text-sindoor leading-none whitespace-nowrap"; dd.textContent = value;
+    cell.append(dt, dd);
+    return cell;
+  }));
+  $("without-extra").hidden = !offerWithoutExtra;
+  $("play-reply").hidden = !audioUrl;
+  if (audioUrl) prepareReply(audioUrl);
+  box.hidden = false;
+  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function prepareReply(url) {
+  const button = $("play-reply");
+  button.textContent = "Preparing the spoken reply";
+  button.disabled = true;
+  replyAudio = new Audio(url);
+  replyAudio.preload = "auto";
+  replyAudio.oncanplaythrough = () => {
+    button.disabled = false;
+    button.textContent = "Play the reply";
+    replyAudio.oncanplaythrough = null;
+    replyAudio.play().catch(() => {});  // if the browser blocks autoplay, the button still works
+  };
+  replyAudio.onplay = () => (button.textContent = "Playing the reply");
+  replyAudio.onended = () => (button.textContent = "Play the reply again");
+  replyAudio.onerror = () => (button.hidden = true);  // the written reply is already on screen
+}
+$("play-reply").onclick = () => { if (replyAudio) { replyAudio.currentTime = 0; replyAudio.play(); } };
+
+function showForm(notice) {
+  $("form").hidden = false;
+  $("show-form").hidden = true;
+  if (notice) { $("notice").textContent = notice; $("notice").hidden = false; }
+}
+$("show-form").onclick = () => { showForm(); $("form").scrollIntoView({ behavior: "smooth" }); };
+
+// ---------- talking to the API ----------
+async function call(url, options) {
+  try {
+    const response = await fetch(url, options);
+    return { status: response.status, body: await response.json() };
+  } catch { return { status: 0, body: { message: "The connection dropped. Please try again.", fallback: "text" } }; }
+}
+
+function showOutcome({ status, body }) {
+  if (status === 200) {
+    const rsvp = body.rsvp || body;
+    showResult({
+      good: true, title: rsvp.attending ? "Your reply is saved" : "Thank you for telling us", rsvp,
+      transcript: body.transcript, replyText: body.reply_text, audioUrl: `/api/rsvp/${rsvp.id}/reply-audio`,
+    });
+    return;
+  }
+  const extraBlocked = ["plus_ones_not_allowed", "catering_locked"].includes(body.error);
+  showResult({
+    good: false, title: extraBlocked ? "Extra guests cannot be added" : "Your reply is not saved yet",
+    message: body.message || "Something is missing. Check the form and send it again.",
+    transcript: body.transcript, offerWithoutExtra: extraBlocked,
+  });
+  if (extraBlocked && body.parsed) setCount("headcount", body.parsed.headcount);
+  if (body.fallback === "text") showForm("Voice is not available right now. Please fill in the form.");
+  loadInvite();
+}
+
+async function sendVoice(url, options) {
+  setMic("busy", "Understanding your reply");
+  const outcome = await call(url, options);
+  setMic("idle", "Tap the flower and speak");
+  showOutcome(outcome);
+}
+
+$("form").onsubmit = async (event) => {
+  event.preventDefault();
+  const data = new FormData($("form"));
+  const attending = data.get("attending") === "yes";
+  const body = {
+    household_id: householdId, attending,
+    headcount: attending ? counts.headcount : 0,
+    plus_ones: attending && invite.plus_ones_allowed ? counts.plus_ones : 0,
+    diet: data.get("diet"),
+  };
+  showOutcome(await call("/api/rsvp/text", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
+};
+$("form").onchange = () => { $("when-attending").hidden = new FormData($("form")).get("attending") === "no"; };
+$("without-extra").onclick = () => { setCount("plus_ones", 0); showForm(); $("form").scrollIntoView({ behavior: "smooth" }); };
+
+// ---------- recording ----------
+$("mic").onclick = async () => {
+  if (recorder) { recorder.stop(); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { showForm("We could not use your microphone. Allow it in the browser, or fill in the form."); return; }
+
+  const chunks = [];
+  recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = (event) => chunks.push(event.data);
+  const stopMeter = startMeter(stream);
+  const timer = setTimeout(() => recorder && recorder.stop(), MAX_RECORDING_MS);
+  recorder.onstop = () => {
+    clearTimeout(timer); stopMeter();
+    stream.getTracks().forEach((track) => track.stop());
+    const type = recorder.mimeType || "audio/webm";  // Chrome records WebM, Safari MP4
+    recorder = null;
+    const body = new FormData();
+    body.append("household_id", householdId);
+    body.append("audio", new Blob(chunks, { type }), type.includes("mp4") ? "reply.mp4" : "reply.webm");
+    sendVoice("/api/rsvp/voice", { method: "POST", body });
+  };
+  recorder.start();
+  setMic("recording", "Listening. Tap again when you finish");
+};
+
+function startMeter(stream) {
+  const audio = new AudioContext();
+  const analyser = audio.createAnalyser();
+  audio.createMediaStreamSource(stream).connect(analyser);
+  const samples = new Uint8Array(analyser.fftSize);
+  let frame;
+  (function tick() {
+    analyser.getByteTimeDomainData(samples);
+    const peak = Math.max(...samples.map((v) => Math.abs(v - 128))) / 128;
+    $("mic").style.setProperty("--level", Math.min(1, peak * 2.2).toFixed(2));
+    frame = requestAnimationFrame(tick);
+  })();
+  return () => { cancelAnimationFrame(frame); audio.close(); $("mic").style.setProperty("--level", 0); };
+}
+
+async function loadSamples() {
+  const { status, body } = await call("/api/samples");
+  if (status !== 200 || !body.length) return;
+  $("sample-buttons").replaceChildren(...body.map((name) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "rounded border-2 border-sindoor px-4 py-2 font-semibold text-sindoor capitalize disabled:opacity-50";
+    button.textContent = name;
+    button.onclick = () => {
+      new Audio(`/api/samples/${name}`).play().catch(() => {});  // so everyone hears what was said
+      sendVoice(`/api/rsvp/voice/sample/${name}?household_id=${householdId}`, { method: "POST" });
+    };
+    return button;
+  }));
+  $("samples").hidden = false;
+}
+
+// ---------- loading ----------
+async function loadInvite() {
+  const { status, body } = await call(`/api/invite/${householdId}`);
+  if (status !== 200) {
+    if (!invite) { $("loading").hidden = true; $("invalid").hidden = status !== 404; if (status !== 404) $("loading").hidden = false; }
+    return;
+  }
+  const first = !invite;
+  invite = body;
+  const { household } = invite;
+  $("greeting").textContent = `${HELLO[household.language]}, ${household.name}`;
+  const [lang, text] = PROMPTS[invite.prompt_variant] || PROMPTS.direct;
+  $("prompt").lang = lang;
+  $("prompt").textContent = text;
+  $("invited-hint").textContent = `Invited: ${household.invited_count}`;
+  $("plus-ones-field").hidden = !invite.plus_ones_allowed;
+  $("voice").hidden = !invite.voice_enabled;
+  if (!invite.voice_enabled) showForm();
+  if (invite.catering_locked) {
+    $("notice").textContent = "The caterer's count is final, so extra guests cannot be added now.";
+    $("notice").hidden = false;
+  }
+  if (first) {
+    const last = invite.latest_rsvp;
+    setCount("headcount", last && last.attending ? last.headcount : household.invited_count);
+    setCount("plus_ones", last ? last.plus_ones : 0);
+    $("loading").hidden = true;
+    $("invite").hidden = false;
+  }
+}
+
+drawPetals();
+loadInvite();
+loadSamples();
+// Flags can change while the page is open, for example when the host locks +1s.
+setInterval(() => { if (document.visibilityState === "visible") loadInvite(); }, 5000);
+</script>
+</body>
+</html>

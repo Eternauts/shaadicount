@@ -28,8 +28,11 @@ def submit(audio: bytes, filename: str, household_id: int, channel: str) -> dict
         "detected_language": heard["language"],
         "parsed": parsed.model_dump(),
     }
+    # Near-silence is often heard as a single word such as "yes". That is not a headcount.
+    words = heard["transcript"].split()
+    too_short = len(words) < 2 and not any(c.isdigit() for c in heard["transcript"])
     try:
-        if parsed.confidence < MIN_CONFIDENCE:
+        if parsed.confidence < MIN_CONFIDENCE or (parsed.attending and too_short):
             raise rsvp.RsvpRejected(
                 422, "not_understood", "Please say how many of you are coming, and veg or non-veg."
             )
@@ -44,6 +47,10 @@ def submit(audio: bytes, filename: str, household_id: int, channel: str) -> dict
         "reply_text": replies.confirmation(household["language"], saved),
         "reply_audio_url": f"/api/rsvp/{saved['id']}/reply-audio",
     }
+
+
+def list_samples() -> list[str]:
+    return sorted(p.stem for p in SAMPLES_DIR.glob("*") if p.suffix.lower() in SAMPLE_TYPES)
 
 
 def load_sample(name: str) -> tuple[bytes, str]:

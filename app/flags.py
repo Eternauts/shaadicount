@@ -4,6 +4,7 @@ import logging
 import httpx
 from flagsmith import Flagsmith
 from flagsmith.exceptions import FlagsmithFeatureDoesNotExistError
+from urllib3.util.retry import Retry
 
 from app.config import (
     FLAGSMITH_ADMIN_TOKEN,
@@ -24,7 +25,11 @@ DEFAULTS = {
 }
 
 _client = (
-    Flagsmith(environment_key=FLAGSMITH_SERVER_ENVIRONMENT_KEY, request_timeout_seconds=3)
+    Flagsmith(
+        environment_key=FLAGSMITH_SERVER_ENVIRONMENT_KEY,
+        request_timeout_seconds=2,
+        retries=Retry(total=1, allowed_methods=None),  # one quick retry, for patchy wifi
+    )
     if FLAGSMITH_SERVER_ENVIRONMENT_KEY
     else None
 )
@@ -69,9 +74,9 @@ def get_identity_flags(household_id: int, traits: dict) -> dict:
     return _read(identifier, lambda: _client.get_identity_flags(identifier, traits=traits))
 
 
-def get_value(feature: str, household_id: int, traits: dict) -> str:
-    """A flag's value for one household. A flag that is off gives the default value."""
-    flag = get_identity_flags(household_id, traits)[feature]
+def get_value(feature: str, state: dict) -> str:
+    """A flag's value from a household's flags. A flag that is off gives the default value."""
+    flag = state[feature]
     return flag["value"] if flag["enabled"] and flag["value"] else DEFAULTS[feature]["value"]
 
 

@@ -1,14 +1,18 @@
 import logging
+import mimetypes
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from app import catering, db, flags, replies, rsvp, sarvam, seed, voice
 from app.config import CATERER_BUFFER_PLATES, SARVAM_API_KEY
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
 logging.getLogger("httpx").setLevel(logging.WARNING)  # it would log every outgoing URL
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 @asynccontextmanager
@@ -72,6 +76,36 @@ def flag_state(household_id: int | None = None):
     return {"flags": state, "live": flags.last_error is None, "error": flags.last_error}
 
 
+@app.get("/")
+def dashboard_page():
+    return FileResponse(STATIC_DIR / "dashboard.html")
+
+
+@app.get("/invite/{household_id}")
+def invite_page(household_id: int):
+    return FileResponse(STATIC_DIR / "invite.html")
+
+
+@app.get("/api/invite/{household_id}")
+def invite(household_id: int):
+    """Everything the guest page needs, after Flagsmith has decided for this household."""
+    household = rsvp.find_household(household_id)
+    state = rsvp.household_flags(household)
+    locked = state["catering_lock_mode"]["enabled"]
+    latest = next(h for h in db.list_households() if h["id"] == household_id)
+    answered = latest["status"] != "pending"
+    return {
+        "household": {k: household[k] for k in ("id", "name", "invited_count", "language")},
+        "plus_ones_allowed": state["allow_plus_ones"]["enabled"] and not locked,
+        "catering_locked": locked,
+        "voice_enabled": not state["voice_fallback_text"]["enabled"],
+        "prompt_variant": flags.get_value("rsvp_prompt_variant", state),
+        "latest_rsvp": (
+            {k: latest[k] for k in ("attending", "headcount", "plus_ones", "diet")} if answered else None
+        ),
+    }
+
+
 @app.get("/api/households")
 def households():
     return db.list_households()
@@ -99,6 +133,17 @@ def rsvp_voice_sample(name: str, household_id: int = 1):
     return voice.submit(data, filename, household_id, channel="web_voice")
 
 
+@app.get("/api/samples")
+def samples():
+    return voice.list_samples()
+
+
+@app.get("/api/samples/{name}")
+def sample_audio(name: str):
+    data, filename = voice.load_sample(name)
+    return Response(data, media_type=mimetypes.guess_type(filename)[0] or "audio/mpeg")
+
+
 @app.get("/api/rsvp/{rsvp_id}/reply-audio")
 def reply_audio(rsvp_id: int):
     saved = db.get_rsvp(rsvp_id)
@@ -113,6 +158,15 @@ def reply_audio(rsvp_id: int):
 @app.get("/api/catering/impact")
 def catering_impact():
     return catering.impact()
+
+
+@app.get("/api/caterer.csv")
+def caterer_csv():
+    return Response(
+        catering.csv_report(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="shaadicount-caterer.csv"'},
+    )
 
 
 @app.post("/api/demo/reset")
