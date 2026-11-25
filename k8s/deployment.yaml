@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shaadicount
+  labels:
+    app: shaadicount
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shaadicount
+  template:
+    metadata:
+      labels:
+        app: shaadicount
+    spec:
+      containers:
+        - name: api
+          image: shaadicount:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: shaadicount-env
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 5
